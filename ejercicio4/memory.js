@@ -1,127 +1,165 @@
 class Card {
-    constructor(name, img) {
+    constructor(name, imgSrc) {
         this.name = name;
-        this.img = img;
+        this.imgSrc = imgSrc;
         this.isFlipped = false;
-        this.element = this.#createCardElement();
+        this.cardElement = this.#createCardElement();
     }
 
     #createCardElement() {
-        const cardElement = document.createElement("div");
-        cardElement.classList.add("cell");
-        cardElement.innerHTML = `
-          <div class="card" data-name="${this.name}">
-              <div class="card-inner">
-                  <div class="card-front"></div>
-                  <div class="card-back">
-                      <img src="${this.img}" alt="${this.name}">
-                  </div>
-              </div>
-          </div>
-      `;
-        return cardElement;
+        const cardDiv = document.createElement('div');
+        cardDiv.classList.add('cell');
+        cardDiv.innerHTML = `
+            <div class="card" data-name="${this.name}">
+                <div class="card-inner">
+                    <div class="card-front"></div>
+                    <div class="card-back">
+                        <img src="${this.imgSrc}" alt="${this.name}">
+                    </div>
+                </div>
+            </div>
+        `;
+        return cardDiv;
     }
 
-    #flip() {
-        const cardElement = this.element.querySelector(".card");
-        cardElement.classList.add("flipped");
+    toggleFlipState() {
+        this.isFlipped = !this.isFlipped;
+        if (this.isFlipped) {
+            this.#flipCard();
+        } else {
+            this.#unflipCard();
+        }
     }
 
-    #unflip() {
-        const cardElement = this.element.querySelector(".card");
-        cardElement.classList.remove("flipped");
+    matches(otherCard) {
+        return this.name === otherCard.name;
+    }
+
+    #flipCard() {
+        this.cardElement.querySelector('.card').classList.add('flipped');
+    }
+
+    #unflipCard() {
+        this.cardElement.querySelector('.card').classList.remove('flipped');
     }
 }
 
 class Board {
     constructor(cards) {
         this.cards = cards;
-        this.fixedGridElement = document.querySelector(".fixed-grid");
-        this.gameBoardElement = document.getElementById("game-board");
+        this.fixedGridContainer = document.querySelector('.fixed-grid');
+        this.gameBoardContainer = document.getElementById('game-board');
     }
 
-    #calculateColumns() {
-        const numCards = this.cards.length;
-        let columns = Math.floor(numCards / 2);
-
-        columns = Math.max(2, Math.min(columns, 12));
-
-        if (columns % 2 !== 0) {
-            columns = columns === 11 ? 12 : columns - 1;
+    #determineColumnCount() {
+        const totalCards = this.cards.length;
+        let columnCount = Math.floor(totalCards / 2);
+        columnCount = Math.max(2, Math.min(columnCount, 12));
+        if (columnCount % 2 !== 0) {
+            columnCount = columnCount === 11 ? 12 : columnCount - 1;
         }
-
-        return columns;
+        return columnCount;
     }
 
-    #setGridColumns() {
-        const columns = this.#calculateColumns();
-        this.fixedGridElement.className = `fixed-grid has-${columns}-cols`;
+    #configureGridColumns() {
+        const columns = this.#determineColumnCount();
+        this.fixedGridContainer.className = `grid grid-has-${columns}-cols`;
     }
 
-    render() {
-        this.#setGridColumns();
-        this.gameBoardElement.innerHTML = "";
-        this.cards.forEach((card) => {
-            card.element
-                .querySelector(".card")
-                .addEventListener("click", () => this.onCardClicked(card));
-            this.gameBoardElement.appendChild(card.element);
+    renderCards() {
+        this.#configureGridColumns();
+        this.gameBoardContainer.innerHTML = '';
+        this.cards.forEach(card => {
+            card.cardElement.querySelector('.card').addEventListener('click', () => this.handleCardClick(card));
+            this.gameBoardContainer.appendChild(card.cardElement);
         });
     }
 
-    onCardClicked(card) {
-        if (this.onCardClick) {
-            this.onCardClick(card);
+    handleCardClick(clickedCard) {
+        if (typeof this.onCardClick === 'function') {
+            this.onCardClick(clickedCard);
         }
+    }
+
+    shuffleCards() {
+        for (let i = this.cards.length - 1; i > 0; i--) {
+            const randomIndex = Math.floor(Math.random() * (i + 1));
+            [this.cards[i], this.cards[randomIndex]] = [this.cards[randomIndex], this.cards[i]];
+        }
+    }
+
+    hideAllCards() {
+        this.cards.forEach(card => {
+            if (card.isFlipped) {
+                card.toggleFlipState();
+            }
+        });
+    }
+
+    resetGame() {
+        this.shuffleCards();
+        this.hideAllCards();
+        this.renderCards();
     }
 }
 
 class MemoryGame {
-    constructor(board, flipDuration = 500) {
-        this.board = board;
+    constructor(gameBoard, flipAnimationDuration = 500) {
+        this.gameBoard = gameBoard;
         this.flippedCards = [];
         this.matchedCards = [];
-        if (flipDuration < 350 || isNaN(flipDuration) || flipDuration > 3000) {
-            flipDuration = 350;
-            alert(
-                "La duración de la animación debe estar entre 350 y 3000 ms, se ha establecido a 350 ms"
-            );
+        if (flipAnimationDuration < 350 || isNaN(flipAnimationDuration) || flipAnimationDuration > 3000) {
+            flipAnimationDuration = 350;
+            alert('La duración de la animación debe estar entre 350 y 3000 ms, se ha establecido a 350 ms');
         }
-        this.flipDuration = flipDuration;
-        this.board.onCardClick = this.#handleCardClick.bind(this);
-        this.board.reset();
+        this.flipAnimationDuration = flipAnimationDuration;
+        this.gameBoard.onCardClick = this.#handleCardClick.bind(this);
+        this.resetGame();
     }
 
-    #handleCardClick(card) {
-        if (this.flippedCards.length < 2 && !card.isFlipped) {
-            card.toggleFlip();
-            this.flippedCards.push(card);
+    #handleCardClick(clickedCard) {
+        if (this.flippedCards.length < 2 && !clickedCard.isFlipped) {
+            clickedCard.toggleFlipState();
+            this.flippedCards.push(clickedCard);
 
             if (this.flippedCards.length === 2) {
-                setTimeout(() => this.checkForMatch(), this.flipDuration);
+                setTimeout(() => this.checkForMatches(), this.flipAnimationDuration);
             }
         }
     }
+
+    checkForMatches() {
+        const [firstFlippedCard, secondFlippedCard] = this.flippedCards;
+        if (firstFlippedCard.matches(secondFlippedCard)) {
+            this.matchedCards.push(firstFlippedCard, secondFlippedCard);
+        } else {
+            firstFlippedCard.toggleFlipState();
+            secondFlippedCard.toggleFlipState();
+        }
+        this.flippedCards = [];
+    }
+
+    resetGame() {
+        this.flippedCards = [];
+        this.matchedCards = [];
+        this.gameBoard.resetGame();
+    }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener('DOMContentLoaded', () => {
     const cardsData = [
-        { name: "Python", img: "./img/Python.svg" },
-        { name: "JavaScript", img: "./img/JS.svg" },
-        { name: "Java", img: "./img/Java.svg" },
-        { name: "CSharp", img: "./img/CSharp.svg" },
-        { name: "Go", img: "./img/Go.svg" },
-        { name: "Ruby", img: "./img/Ruby.svg" },
+        { name: 'Python', imgSrc: './img/Python.svg' },
+        { name: 'JavaScript', imgSrc: './img/JS.svg' },
+        { name: 'Java', imgSrc: './img/Java.svg' },
+        { name: 'CSharp', imgSrc: './img/CSharp.svg' },
+        { name: 'Go', imgSrc: './img/Go.svg' },
+        { name: 'Ruby', imgSrc: './img/Ruby.svg' },
     ];
 
-    const cards = cardsData.flatMap((data) => [
-        new Card(data.name, data.img),
-        new Card(data.name, data.img),
-    ]);
-    const board = new Board(cards);
-    const memoryGame = new MemoryGame(board, 1000);
+    const cards = cardsData.flatMap(data => [new Card(data.name, data.imgSrc), new Card(data.name, data.imgSrc)]);
+    const gameBoard = new Board(cards);
+    const memoryGameInstance = new MemoryGame(gameBoard, 1000);
 
-    document.getElementById("restart-button").addEventListener("click", () => {
-        memoryGame.resetGame();
-    });
+    document.getElementById('restart-button').addEventListener('click', () => memoryGameInstance.resetGame());
 });
+

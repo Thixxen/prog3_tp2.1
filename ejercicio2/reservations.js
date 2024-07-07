@@ -1,6 +1,33 @@
-class Customer {}
+class Customer {
+    constructor(id, name, email) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+    }
 
-class Reservation {}
+    get info() {
+        return `Nombre: ${this.name}, Email: ${this.email}`;
+    }
+}
+
+class Reservation {
+    constructor(id, customer, date, guests) {
+        this.id = id;
+        this.customer = customer;
+        this.date = new Date(date);
+        this.guests = guests;
+    }
+
+    get info() {
+        return `Fecha: ${this.date.toLocaleString()}, Cliente: ${this.customer.info}, Comensales: ${this.guests}`;
+    }
+
+    static validateReservation(date, guests) {
+        const reservationDate = new Date(date);
+        const currentDate = new Date();
+        return reservationDate > currentDate && guests > 0;
+    }
+}
 
 class Restaurant {
     constructor(name) {
@@ -31,7 +58,7 @@ class Restaurant {
                             </p>
                         </div>
                     </div>
-              `;
+                `;
             container.appendChild(reservationCard);
         });
     }
@@ -66,20 +93,21 @@ document
 
             restaurant.addReservation(reservation);
             restaurant.render();
+            event.target.reset();
         } else {
-            alert("Datos de reserva inválidos");
+            alert("Los datos de reserva son invalidos");
             return;
         }
     });
 
-const restaurant = new Restaurant("El Lojal Kolinar");
+const restaurant = new Restaurant("La Monumental");
 
-const customer1 = new Customer(1, "Shallan Davar", "shallan@gmail.com");
+const customer1 = new Customer(1, "Galo Carreras", "GaloLucas@gmail.com");
 const reservation1 = new Reservation(1, customer1, "2024-12-31T20:00:00", 4);
 
 if (Reservation.validateReservation(reservation1.date, reservation1.guests)) {
     restaurant.addReservation(reservation1);
     restaurant.render();
 } else {
-    alert("Datos de reserva inválidos");
+    alert("Los datos de reserva son invalidos");
 }
